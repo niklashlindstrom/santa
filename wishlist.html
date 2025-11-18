@@ -291,12 +291,12 @@
     };
 
     const submitWish = async (wishData) => {
+      const submitWish = async (wishData) => {
       try {
         const response = await fetch(API_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          // Important: no "application/json" header, so no CORS preflight
+          // headers: { "Content-Type": "text/plain;charset=utf-8" }, // optional
           body: JSON.stringify(wishData)
         });
 
