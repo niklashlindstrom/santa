@@ -179,6 +179,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <h1>Christmas Wishlist 2025</h1>
@@ -187,11 +188,11 @@
     <form id="wishlist-form">
       <div>
         <label for="name">Your name *</label>
-        <input type="text" id="name" name="name" placeholder="e.g., Alex" required />
+        <input type="text" id="name" name="name" required />
       </div>
       <div>
         <label for="item">Wishlist item *</label>
-        <input type="text" id="item" name="item" placeholder="e.g., Cozy sweater" required />
+        <input type="text" id="item" name="item" required />
       </div>
       <div>
         <label for="link">Link (optional)</label>
@@ -199,7 +200,7 @@
       </div>
       <div>
         <label for="notes">Notes (optional)</label>
-        <textarea id="notes" name="notes" placeholder="Color, size, where to find it..."></textarea>
+        <textarea id="notes" name="notes"></textarea>
       </div>
       <button type="submit">Add to wishlist</button>
       <div class="error-message" id="error-message"></div>
@@ -218,7 +219,7 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyz2n4kwyurJm1cAGggxumY9M9StLXXuuQATT1lqqatbGVihzzNdHWhWAN09fbiakHa/exec";
+    const API_URL = "YOUR_WEB_APP_URL_HERE";
 
     const form = document.getElementById("wishlist-form");
     const errorMessage = document.getElementById("error-message");
@@ -230,18 +231,11 @@
     const formatDate = (isoString) => {
       if (!isoString) return "";
       const date = new Date(isoString);
-      return date.toLocaleString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
+      return date.toLocaleString();
     };
 
     const renderWishes = (wishes = []) => {
       wishListEl.innerHTML = "";
-
       if (!wishes.length) {
         wishListEl.innerHTML = '<p>No wishes yet. Be the first to add one!</p>';
         wishCountEl.textContent = "0 wishes";
@@ -252,9 +246,8 @@
         const card = document.createElement("article");
         card.className = "wish-card";
 
-        const linkMarkup = wish.link
-          ? `<div><strong>Link:</strong> <a href="${wish.link}" target="_blank" rel="noopener">${wish.link}</a></div>`
-          : "";
+        const linkMarkup =
+          wish.link ? `<div><strong>Link:</strong> <a href="${wish.link}" target="_blank">${wish.link}</a></div>` : "";
 
         const notesMarkup = wish.notes ? `<div><strong>Notes:</strong> ${wish.notes}</div>` : "";
 
@@ -265,43 +258,36 @@
           ${notesMarkup}
           <p class="meta">Added on ${formatDate(wish.timestamp)}</p>
         `;
-
         wishListEl.appendChild(card);
       });
 
-      wishCountEl.textContent = wishes.length === 1 ? "1 wish" : `${wishes.length} wishes`;
+      wishCountEl.textContent = `${wishes.length} wishes`;
     };
 
     const fetchWishes = async () => {
       loadingMessage.textContent = "Loading wishes...";
       try {
         const response = await fetch(API_URL);
-        if (!response.ok) {
-          throw new Error("Failed to load wishes");
-        }
         const wishes = await response.json();
         const sorted = wishes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         renderWishes(sorted);
       } catch (error) {
-        console.error(error);
-        wishListEl.innerHTML = '<p style="color:#b91c1c;">Unable to load wishes right now. Please try again later.</p>';
+        wishListEl.innerHTML =
+          '<p style="color:#b91c1c;">Unable to load wishes right now. Please try again later.</p>';
       } finally {
         loadingMessage.textContent = "";
       }
     };
 
     const submitWish = async (wishData) => {
-      const submitWish = async (wishData) => {
       try {
         const response = await fetch(API_URL, {
           method: "POST",
-          // Important: no "application/json" header, so no CORS preflight
-          // headers: { "Content-Type": "text/plain;charset=utf-8" }, // optional
-          body: JSON.stringify(wishData)
+          body: JSON.stringify(wishData) // important: no Content-Type header to avoid CORS preflight
         });
 
         const result = await response.json();
-        if (!response.ok || !result.success) {
+        if (!result.success) {
           throw new Error(result.message || "Failed to add wish");
         }
 
@@ -310,36 +296,28 @@
         form.reset();
         fetchWishes();
       } catch (error) {
-        successMessage.textContent = "";
-        errorMessage.textContent = error.message || "Something went wrong";
+        errorMessage.textContent = error.message;
       } finally {
-        setTimeout(() => {
-          successMessage.textContent = "";
-        }, 4000);
+        setTimeout(() => (successMessage.textContent = ""), 4000);
       }
     };
 
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
       errorMessage.textContent = "";
       successMessage.textContent = "";
 
-      const name = form.name.value.trim();
-      const item = form.item.value.trim();
-      const link = form.link.value.trim();
-      const notes = form.notes.value.trim();
+      const wishData = {
+        name: form.name.value.trim(),
+        item: form.item.value.trim(),
+        link: form.link.value.trim(),
+        notes: form.notes.value.trim()
+      };
 
-      if (!name || !item) {
+      if (!wishData.name || !wishData.item) {
         errorMessage.textContent = "Please fill out your name and the wishlist item.";
         return;
       }
-
-      const wishData = {
-        name,
-        item,
-        link,
-        notes
-      };
 
       submitWish(wishData);
     });
