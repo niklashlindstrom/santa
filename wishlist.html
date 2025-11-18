@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Christmas Wishlist 2025</title>
+  <title>Julönskelista 2025</title>
   <style>
     :root {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -52,7 +52,8 @@
     }
 
     input[type="text"],
-    textarea {
+    textarea,
+    select {
       width: 100%;
       padding: 0.85rem 1rem;
       border: 1px solid #cbd5f5;
@@ -68,6 +69,11 @@
       border-color: #ef4444;
       outline: none;
       box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+
+    select {
+      background-color: #fff;
+      cursor: pointer;
     }
 
     textarea {
@@ -129,42 +135,83 @@
     .wish-list {
       display: flex;
       flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .loading-message {
+      text-align: center;
+      color: #475569;
+    }
+
+    .person-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #fff7f7;
+      overflow: hidden;
+    }
+
+    .person-card summary {
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .person-card summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .person-card .count {
+      color: #b91c1c;
+      font-size: 0.95rem;
+    }
+
+    .person-wishes {
+      padding: 0 1.25rem 1rem;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .person-wishes .empty {
+      margin: 1rem 0 0;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .wish-items {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
       gap: 1rem;
     }
 
-    .wish-card {
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1rem 1.25rem;
-      background: #fdfdfd;
-      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+    .wish-items li {
+      padding-top: 1rem;
     }
 
-    .wish-card h3 {
-      margin: 0;
-      color: #dc2626;
-      font-size: 1.15rem;
-    }
-
-    .wish-card .item {
+    .wish-items .item {
       font-size: 1.05rem;
-      margin: 0.35rem 0;
+      margin: 0;
       color: #0f172a;
       font-weight: 600;
     }
 
-    .wish-card .meta {
+    .wish-items .meta {
       font-size: 0.9rem;
       color: #475569;
     }
 
-    .wish-card a {
+    .wish-items a {
       color: #2563eb;
       text-decoration: none;
       font-weight: 500;
     }
 
-    .wish-card a:hover {
+    .wish-items a:hover {
       text-decoration: underline;
     }
 
@@ -182,43 +229,52 @@
 
 <body>
   <div class="container">
-    <h1>Christmas Wishlist 2025</h1>
-    <p class="description">Add your name and what you’d like. Anyone with this link can see and add items.</p>
+    <h1>Julönskelista 2025</h1>
+    <p class="description">Lägg till ditt namn och vad du önskar dig. Alla med länken kan se och lägga till saker.</p>
 
     <form id="wishlist-form">
       <div>
-        <label for="name">Your name *</label>
-        <input type="text" id="name" name="name" required />
+        <label for="name">Ditt namn *</label>
+        <select id="name" name="name" required>
+          <option value="" disabled selected>Välj ditt namn</option>
+          <option value="Anders">Anders</option>
+          <option value="Cecilia">Cecilia</option>
+          <option value="Lena">Lena</option>
+          <option value="Linnea">Linnea</option>
+          <option value="Linus">Linus</option>
+          <option value="Niklas">Niklas</option>
+        </select>
       </div>
       <div>
-        <label for="item">Wishlist item *</label>
+        <label for="item">Önskning *</label>
         <input type="text" id="item" name="item" required />
       </div>
       <div>
-        <label for="link">Link (optional)</label>
+        <label for="link">Länk (valfritt)</label>
         <input type="text" id="link" name="link" placeholder="https://..." />
       </div>
       <div>
-        <label for="notes">Notes (optional)</label>
+        <label for="notes">Noteringar (valfritt)</label>
         <textarea id="notes" name="notes"></textarea>
       </div>
-      <button type="submit">Add to wishlist</button>
+      <button type="submit">Lägg till i önskelistan</button>
       <div class="error-message" id="error-message"></div>
       <div class="success-message" id="success-message"></div>
     </form>
 
     <section class="wishes-section">
       <div class="wishes-header">
-        <h2>All wishes</h2>
-        <span id="wish-count">0 wishes</span>
+        <h2>Önskningar per person</h2>
+        <span id="wish-count">0 önskningar</span>
       </div>
       <div class="wish-list" id="wish-list">
-        <p id="loading-message">Loading wishes...</p>
+        <p class="loading-message">Laddar önskningar...</p>
       </div>
     </section>
   </div>
 
   <script>
+    const PEOPLE = ["Anders", "Cecilia", "Lena", "Linnea", "Linus", "Niklas"];
     const API_URL = "https://script.google.com/macros/s/AKfycbyz2n4kwyurJm1cAGggxumY9M9StLXXuuQATT1lqqatbGVihzzNdHWhWAN09fbiakHa/exec";
 
     const form = document.getElementById("wishlist-form");
@@ -226,46 +282,70 @@
     const successMessage = document.getElementById("success-message");
     const wishListEl = document.getElementById("wish-list");
     const wishCountEl = document.getElementById("wish-count");
-    const loadingMessage = document.getElementById("loading-message");
 
     const formatDate = (isoString) => {
       if (!isoString) return "";
       const date = new Date(isoString);
-      return date.toLocaleString();
+      return date.toLocaleString("sv-SE");
     };
 
     const renderWishes = (wishes = []) => {
       wishListEl.innerHTML = "";
-      if (!wishes.length) {
-        wishListEl.innerHTML = '<p>No wishes yet. Be the first to add one!</p>';
-        wishCountEl.textContent = "0 wishes";
-        return;
-      }
 
-      wishes.forEach((wish) => {
-        const card = document.createElement("article");
-        card.className = "wish-card";
+      const grouped = PEOPLE.map((name) => ({
+        name,
+        wishes: wishes.filter((wish) => (wish.name || "").trim() === name)
+      }));
 
-        const linkMarkup =
-          wish.link ? `<div><strong>Link:</strong> <a href="${wish.link}" target="_blank">${wish.link}</a></div>` : "";
+      grouped.forEach(({ name, wishes: personWishes }) => {
+        const details = document.createElement("details");
+        details.className = "person-card";
 
-        const notesMarkup = wish.notes ? `<div><strong>Notes:</strong> ${wish.notes}</div>` : "";
-
-        card.innerHTML = `
-          <h3>${wish.name || "Anonymous"}</h3>
-          <p class="item">${wish.item || "(no item)"}</p>
-          ${linkMarkup}
-          ${notesMarkup}
-          <p class="meta">Added on ${formatDate(wish.timestamp)}</p>
+        const summary = document.createElement("summary");
+        summary.innerHTML = `
+          <span>${name}</span>
+          <span class="count">${personWishes.length} ${
+            personWishes.length === 1 ? "önskning" : "önskningar"
+          }</span>
         `;
-        wishListEl.appendChild(card);
+        details.appendChild(summary);
+
+        const content = document.createElement("div");
+        content.className = "person-wishes";
+
+        if (!personWishes.length) {
+          content.innerHTML = '<p class="empty">Inga önskningar än.</p>';
+        } else {
+          const list = document.createElement("ul");
+          list.className = "wish-items";
+
+          personWishes.forEach((wish) => {
+            const listItem = document.createElement("li");
+            listItem.innerHTML = `
+              <p class="item">${wish.item || "(ingen önskning)"}</p>
+              ${
+                wish.link
+                  ? `<div><strong>Länk:</strong> <a href="${wish.link}" target="_blank" rel="noopener noreferrer">${wish.link}</a></div>`
+                  : ""
+              }
+              ${wish.notes ? `<div><strong>Noteringar:</strong> ${wish.notes}</div>` : ""}
+              <p class="meta">Tillagd ${formatDate(wish.timestamp)}</p>
+            `;
+            list.appendChild(listItem);
+          });
+
+          content.appendChild(list);
+        }
+
+        details.appendChild(content);
+        wishListEl.appendChild(details);
       });
 
-      wishCountEl.textContent = `${wishes.length} wishes`;
+      wishCountEl.textContent = `${wishes.length} ${wishes.length === 1 ? "önskning" : "önskningar"}`;
     };
 
     const fetchWishes = async () => {
-      loadingMessage.textContent = "Loading wishes...";
+      wishListEl.innerHTML = '<p class="loading-message">Laddar önskningar...</p>';
       try {
         const response = await fetch(API_URL);
         const wishes = await response.json();
@@ -273,9 +353,7 @@
         renderWishes(sorted);
       } catch (error) {
         wishListEl.innerHTML =
-          '<p style="color:#b91c1c;">Unable to load wishes right now. Please try again later.</p>';
-      } finally {
-        loadingMessage.textContent = "";
+          '<p style="color:#b91c1c;">Kunde inte ladda önskningarna just nu. Försök igen senare.</p>';
       }
     };
 
@@ -288,10 +366,10 @@
 
         const result = await response.json();
         if (!result.success) {
-          throw new Error(result.message || "Failed to add wish");
+          throw new Error(result.message || "Kunde inte lägga till önskningen");
         }
 
-        successMessage.textContent = "Wish added!";
+        successMessage.textContent = "Önskning tillagd!";
         errorMessage.textContent = "";
         form.reset();
         fetchWishes();
@@ -315,7 +393,7 @@
       };
 
       if (!wishData.name || !wishData.item) {
-        errorMessage.textContent = "Please fill out your name and the wishlist item.";
+        errorMessage.textContent = "Fyll i ditt namn och vad du önskar dig.";
         return;
       }
 
