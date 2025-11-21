@@ -303,7 +303,7 @@
 
   <script>
     const PEOPLE = ["Anders", "Cecilia", "Lena", "Linnea", "Linus", "Niklas"];
-    const API_URL = "https://script.google.com/macros/s/AKfycbwOnk77Qe9gScDgnBAfKZdXJTx7MchofXFhOOdbXQ6MBdJwuuRj2yN-yVpJ9cg0noTR/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbz6wlzkOVP8MVzYxHQzUCDyMgY1F1E2w-kJ_gXaBWRDqvFpElKJAGA-m2ny_7Ph-o_s/exec";
 
     const form = document.getElementById("wishlist-form");
   const errorMessage = document.getElementById("error-message");
@@ -372,8 +372,7 @@
     try {
       const result = await jsonpRequest({
         action: "delete",
-        timestamp: wish.timestamp || "",
-        rowNumber: wish.rowNumber || ""
+        rowNumber: wish.rowNumber
       });
 
       if (!result.success) {
