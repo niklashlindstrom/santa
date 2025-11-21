@@ -190,7 +190,18 @@
     }
 
     .wish-items li {
-      padding-top: 1rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+    }
+
+    .wish-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.35rem;
     }
 
     .wish-items .item {
@@ -215,6 +226,19 @@
       text-decoration: underline;
     }
 
+    .delete-button {
+      background: #fff1f2;
+      color: #b91c1c;
+      border: 1px solid #fecdd3;
+      padding: 0.35rem 0.85rem;
+      border-radius: 10px;
+      box-shadow: none;
+    }
+
+    .delete-button:hover {
+      box-shadow: 0 6px 14px rgba(239, 68, 68, 0.2);
+    }
+
     @media (max-width: 640px) {
       .container {
         padding: 24px 18px;
@@ -222,6 +246,10 @@
 
       button {
         width: 100%;
+      }
+
+      .delete-button {
+        width: auto;
       }
     }
   </style>
@@ -289,6 +317,36 @@
       return date.toLocaleString("sv-SE");
     };
 
+    const deleteWish = async (wish) => {
+      const confirmed = confirm(
+        `Ta bort "${wish.item || "(ingen önskning)"}" från ${wish.name}?`
+      );
+
+      if (!confirmed) return;
+
+      errorMessage.textContent = "";
+      successMessage.textContent = "";
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "delete", timestamp: wish.timestamp })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.message || "Kunde inte ta bort önskningen.");
+        }
+
+        successMessage.textContent = "Önskning borttagen.";
+        fetchWishes();
+      } catch (error) {
+        errorMessage.textContent = error.message;
+      } finally {
+        setTimeout(() => (successMessage.textContent = ""), 4000);
+      }
+    };
+
     const renderWishes = (wishes = []) => {
       wishListEl.innerHTML = "";
 
@@ -321,16 +379,41 @@
 
           personWishes.forEach((wish) => {
             const listItem = document.createElement("li");
-            listItem.innerHTML = `
-              <p class="item">${wish.item || "(ingen önskning)"}</p>
-              ${
-                wish.link
-                  ? `<div><strong>Länk:</strong> <a href="${wish.link}" target="_blank" rel="noopener noreferrer">${wish.link}</a></div>`
-                  : ""
-              }
-              ${wish.notes ? `<div><strong>Noteringar:</strong> ${wish.notes}</div>` : ""}
-              <p class="meta">Tillagd ${formatDate(wish.timestamp)}</p>
-            `;
+
+            const header = document.createElement("div");
+            header.className = "wish-item-header";
+
+            const title = document.createElement("p");
+            title.className = "item";
+            title.textContent = wish.item || "(ingen önskning)";
+
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "delete-button";
+            deleteButton.textContent = "Ta bort";
+            deleteButton.addEventListener("click", () => deleteWish(wish));
+
+            header.appendChild(title);
+            header.appendChild(deleteButton);
+            listItem.appendChild(header);
+
+            if (wish.link) {
+              const linkEl = document.createElement("div");
+              linkEl.innerHTML = `<strong>Länk:</strong> <a href="${wish.link}" target="_blank" rel="noopener noreferrer">${wish.link}</a>`;
+              listItem.appendChild(linkEl);
+            }
+
+            if (wish.notes) {
+              const notesEl = document.createElement("div");
+              notesEl.innerHTML = `<strong>Noteringar:</strong> ${wish.notes}`;
+              listItem.appendChild(notesEl);
+            }
+
+            const meta = document.createElement("p");
+            meta.className = "meta";
+            meta.textContent = `Tillagd ${formatDate(wish.timestamp)}`;
+            listItem.appendChild(meta);
+
             list.appendChild(listItem);
           });
 
