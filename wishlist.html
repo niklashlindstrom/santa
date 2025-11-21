@@ -303,201 +303,235 @@
 
   <script>
     const PEOPLE = ["Anders", "Cecilia", "Lena", "Linnea", "Linus", "Niklas"];
-    const API_URL = "https://script.google.com/macros/s/AKfycbx5lIv1dzplmP91bAAjq34VkftQiiWD6NDCBEwIacHTTe84WmUoCEtjrxwhzU_5TrrY/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwOnk77Qe9gScDgnBAfKZdXJTx7MchofXFhOOdbXQ6MBdJwuuRj2yN-yVpJ9cg0noTR/exec";
 
     const form = document.getElementById("wishlist-form");
-    const errorMessage = document.getElementById("error-message");
-    const successMessage = document.getElementById("success-message");
-    const wishListEl = document.getElementById("wish-list");
-    const wishCountEl = document.getElementById("wish-count");
+  const errorMessage = document.getElementById("error-message");
+  const successMessage = document.getElementById("success-message");
+  const wishListEl = document.getElementById("wish-list");
+  const wishCountEl = document.getElementById("wish-count");
 
-    const formatDate = (isoString) => {
-      if (!isoString) return "";
-      const date = new Date(isoString);
-      return date.toLocaleString("sv-SE");
-    };
+  const formatDate = (isoString) => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    return date.toLocaleString("sv-SE");
+  };
 
-    const deleteWish = async (wish) => {
-      const confirmed = confirm(
-        `Ta bort "${wish.item || "(ingen önskning)"}" från ${wish.name}?`
-      );
+  // ---- JSONP helper ----
+  const jsonpRequest = (params) => {
+    return new Promise((resolve, reject) => {
+      const callbackName =
+        "jsonp_cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
 
-      if (!confirmed) return;
+      params = { ...params, callback: callbackName };
+      const query = new URLSearchParams(params).toString();
+      const script = document.createElement("script");
+      script.src = `${API_URL}?${query}`;
 
-      errorMessage.textContent = "";
-      successMessage.textContent = "";
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error("Förfrågan tog för lång tid (timeout)."));
+      }, 15000); // 15s timeout, just in case
 
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "delete",
-            timestamp: wish.timestamp,
-            rowNumber: wish.rowNumber,
-          }),
-        });
-        
-        // Check HTTP status first
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`);
+      function cleanup() {
+        clearTimeout(timeoutId);
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
         }
-        
-        // Parse JSON result
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.message || "Kunde inte ta bort önskningen.");
+        try {
+          delete window[callbackName];
+        } catch {
+          window[callbackName] = undefined;
         }
-
-        successMessage.textContent = "Önskning borttagen.";
-        fetchWishes();
-      } catch (error) {
-        errorMessage.textContent = error.message;
-      } finally {
-        setTimeout(() => (successMessage.textContent = ""), 4000);
       }
-    };
 
-    const renderWishes = (wishes = []) => {
-      wishListEl.innerHTML = "";
-
-      const grouped = PEOPLE.map((name) => ({
-        name,
-        wishes: wishes.filter((wish) => (wish.name || "").trim() === name)
-      }));
-
-      grouped.forEach(({ name, wishes: personWishes }) => {
-        const details = document.createElement("details");
-        details.className = "person-card";
-
-        const summary = document.createElement("summary");
-        summary.innerHTML = `
-          <span>${name}</span>
-          <span class="count">${personWishes.length} ${
-            personWishes.length === 1 ? "önskning" : "önskningar"
-          }</span>
-        `;
-        details.appendChild(summary);
-
-        const content = document.createElement("div");
-        content.className = "person-wishes";
-
-        if (!personWishes.length) {
-          content.innerHTML = '<p class="empty">Inga önskningar än.</p>';
-        } else {
-          const list = document.createElement("ul");
-          list.className = "wish-items";
-
-          personWishes.forEach((wish) => {
-            const listItem = document.createElement("li");
-
-            const header = document.createElement("div");
-            header.className = "wish-item-header";
-
-            const title = document.createElement("p");
-            title.className = "item";
-            title.textContent = wish.item || "(ingen önskning)";
-
-            const deleteButton = document.createElement("button");
-            deleteButton.type = "button";
-            deleteButton.className = "delete-button";
-            deleteButton.textContent = "Ta bort";
-            deleteButton.addEventListener("click", () => deleteWish(wish));
-
-            header.appendChild(title);
-            header.appendChild(deleteButton);
-            listItem.appendChild(header);
-
-            if (wish.link) {
-              const linkEl = document.createElement("div");
-              linkEl.innerHTML = `<strong>Länk:</strong> <a href="${wish.link}" target="_blank" rel="noopener noreferrer">${wish.link}</a>`;
-              listItem.appendChild(linkEl);
-            }
-
-            if (wish.notes) {
-              const notesEl = document.createElement("div");
-              notesEl.innerHTML = `<strong>Noteringar:</strong> ${wish.notes}`;
-              listItem.appendChild(notesEl);
-            }
-
-            const meta = document.createElement("p");
-            meta.className = "meta";
-            meta.textContent = `Tillagd ${formatDate(wish.timestamp)}`;
-            listItem.appendChild(meta);
-
-            list.appendChild(listItem);
-          });
-
-          content.appendChild(list);
-        }
-
-        details.appendChild(content);
-        wishListEl.appendChild(details);
-      });
-
-      wishCountEl.textContent = `${wishes.length} ${wishes.length === 1 ? "önskning" : "önskningar"}`;
-    };
-
-    const fetchWishes = async () => {
-      wishListEl.innerHTML = '<p class="loading-message">Laddar önskningar...</p>';
-      try {
-        const response = await fetch(API_URL);
-        const wishes = await response.json();
-        const sorted = wishes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        renderWishes(sorted);
-      } catch (error) {
-        wishListEl.innerHTML =
-          '<p style="color:#b91c1c;">Kunde inte ladda önskningarna just nu. Försök igen senare.</p>';
-      }
-    };
-
-    const submitWish = async (wishData) => {
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify(wishData) // important: no Content-Type header to avoid CORS preflight
-        });
-
-        const result = await response.json();
-        if (!result.success) {
-          throw new Error(result.message || "Kunde inte lägga till önskningen");
-        }
-
-        successMessage.textContent = "Önskning tillagd!";
-        errorMessage.textContent = "";
-        form.reset();
-        fetchWishes();
-      } catch (error) {
-        errorMessage.textContent = error.message;
-      } finally {
-        setTimeout(() => (successMessage.textContent = ""), 4000);
-      }
-    };
-
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      errorMessage.textContent = "";
-      successMessage.textContent = "";
-
-      const wishData = {
-        name: form.name.value.trim(),
-        item: form.item.value.trim(),
-        link: form.link.value.trim(),
-        notes: form.notes.value.trim()
+      window[callbackName] = (data) => {
+        cleanup();
+        resolve(data);
       };
 
-      if (!wishData.name || !wishData.item) {
-        errorMessage.textContent = "Fyll i ditt namn och vad du önskar dig.";
-        return;
+      script.onerror = () => {
+        cleanup();
+        reject(new Error("Kunde inte nå tjänsten."));
+      };
+
+      document.body.appendChild(script);
+    });
+  };
+
+  const deleteWish = async (wish) => {
+    const confirmed = confirm(
+      `Ta bort "${wish.item || "(ingen önskning)"}" från ${wish.name}?`
+    );
+
+    if (!confirmed) return;
+
+    errorMessage.textContent = "";
+    successMessage.textContent = "";
+
+    try {
+      const result = await jsonpRequest({
+        action: "delete",
+        timestamp: wish.timestamp || "",
+        rowNumber: wish.rowNumber || ""
+      });
+
+      if (!result.success) {
+        throw new Error(result.message || "Kunde inte ta bort önskningen.");
       }
 
-      submitWish(wishData);
+      successMessage.textContent = "Önskning borttagen.";
+      fetchWishes();
+    } catch (error) {
+      errorMessage.textContent = error.message;
+    } finally {
+      setTimeout(() => (successMessage.textContent = ""), 4000);
+    }
+  };
+
+  const renderWishes = (wishes = []) => {
+    wishListEl.innerHTML = "";
+
+    const grouped = PEOPLE.map((name) => ({
+      name,
+      wishes: wishes.filter((wish) => (wish.name || "").trim() === name)
+    }));
+
+    grouped.forEach(({ name, wishes: personWishes }) => {
+      const details = document.createElement("details");
+      details.className = "person-card";
+
+      const summary = document.createElement("summary");
+      summary.innerHTML = `
+        <span>${name}</span>
+        <span class="count">${personWishes.length} ${
+          personWishes.length === 1 ? "önskning" : "önskningar"
+        }</span>
+      `;
+      details.appendChild(summary);
+
+      const content = document.createElement("div");
+      content.className = "person-wishes";
+
+      if (!personWishes.length) {
+        content.innerHTML = '<p class="empty">Inga önskningar än.</p>';
+      } else {
+        const list = document.createElement("ul");
+        list.className = "wish-items";
+
+        personWishes.forEach((wish) => {
+          const listItem = document.createElement("li");
+
+          const header = document.createElement("div");
+          header.className = "wish-item-header";
+
+          const title = document.createElement("p");
+          title.className = "item";
+          title.textContent = wish.item || "(ingen önskning)";
+
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "delete-button";
+          deleteButton.textContent = "Ta bort";
+          deleteButton.addEventListener("click", () => deleteWish(wish));
+
+          header.appendChild(title);
+          header.appendChild(deleteButton);
+          listItem.appendChild(header);
+
+          if (wish.link) {
+            const linkEl = document.createElement("div");
+            linkEl.innerHTML = `<strong>Länk:</strong> <a href="${wish.link}" target="_blank" rel="noopener noreferrer">${wish.link}</a>`;
+            listItem.appendChild(linkEl);
+          }
+
+          if (wish.notes) {
+            const notesEl = document.createElement("div");
+            notesEl.innerHTML = `<strong>Noteringar:</strong> ${wish.notes}`;
+            listItem.appendChild(notesEl);
+          }
+
+          const meta = document.createElement("p");
+          meta.className = "meta";
+          meta.textContent = `Tillagd ${formatDate(wish.timestamp)}`;
+          listItem.appendChild(meta);
+
+          list.appendChild(listItem);
+        });
+
+        content.appendChild(list);
+      }
+
+      details.appendChild(content);
+      wishListEl.appendChild(details);
     });
 
-    fetchWishes();
-  </script>
+    wishCountEl.textContent = `${wishes.length} ${
+      wishes.length === 1 ? "önskning" : "önskningar"
+    }`;
+  };
+
+  const fetchWishes = async () => {
+    wishListEl.innerHTML =
+      '<p class="loading-message">Laddar önskningar...</p>';
+    try {
+      const wishes = await jsonpRequest({ action: "list" });
+      const sorted = wishes.sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
+      renderWishes(sorted);
+    } catch (error) {
+      wishListEl.innerHTML =
+        '<p style="color:#b91c1c;">Kunde inte ladda önskningarna just nu. Försök igen senare.</p>';
+    }
+  };
+
+  const submitWish = async (wishData) => {
+    try {
+      const result = await jsonpRequest({
+        action: "add",
+        name: wishData.name,
+        item: wishData.item,
+        link: wishData.link,
+        notes: wishData.notes
+      });
+
+      if (!result.success) {
+        throw new Error(result.message || "Kunde inte lägga till önskningen.");
+      }
+
+      successMessage.textContent = "Önskning tillagd!";
+      errorMessage.textContent = "";
+      form.reset();
+      fetchWishes();
+    } catch (error) {
+      errorMessage.textContent = error.message;
+    } finally {
+      setTimeout(() => (successMessage.textContent = ""), 4000);
+    }
+  };
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    errorMessage.textContent = "";
+    successMessage.textContent = "";
+
+    const wishData = {
+      name: form.name.value.trim(),
+      item: form.item.value.trim(),
+      link: form.link.value.trim(),
+      notes: form.notes.value.trim()
+    };
+
+    if (!wishData.name || !wishData.item) {
+      errorMessage.textContent = "Fyll i ditt namn och vad du önskar dig.";
+      return;
+    }
+
+    submitWish(wishData);
+  });
+
+  fetchWishes();
+</script>
 </body>
 </html>
