@@ -41,6 +41,35 @@ function doPost(e) {
     }
 
     const payload = JSON.parse(e.postData.contents);
+    const action = (payload.action || "add").toLowerCase();
+
+    if (action === "delete") {
+      const timestamp = payload.timestamp;
+
+      if (!timestamp) {
+        return createErrorResponse("Timestamp is required to delete an entry.");
+      }
+
+      const sheet = getWishlistSheet();
+      const data = sheet.getDataRange().getValues();
+      let rowToDelete = -1;
+
+      for (let i = 1; i < data.length; i++) {
+        const rowTimestamp = data[i][0] instanceof Date ? data[i][0].toISOString() : data[i][0];
+        if (rowTimestamp === timestamp) {
+          rowToDelete = i + 1; // sheets are 1-indexed
+          break;
+        }
+      }
+
+      if (rowToDelete === -1) {
+        return createErrorResponse("Entry not found.");
+      }
+
+      sheet.deleteRow(rowToDelete);
+      return createJsonOutput({ success: true, message: "Item deleted" });
+    }
+
     const name = (payload.name || "").trim();
     const item = (payload.item || "").trim();
     const link = (payload.link || "").trim();
