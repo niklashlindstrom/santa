@@ -330,14 +330,24 @@
       try {
         const response = await fetch(API_URL, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             action: "delete",
             timestamp: wish.timestamp,
-            rowNumber: wish.rowNumber
-          })
+            rowNumber: wish.rowNumber,
+          }),
         });
-
+        
+        // Check HTTP status first
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        // Parse JSON result
         const result = await response.json();
+        
         if (!result.success) {
           throw new Error(result.message || "Kunde inte ta bort önskningen.");
         }
