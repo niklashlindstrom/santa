@@ -330,7 +330,11 @@
       try {
         const response = await fetch(API_URL, {
           method: "POST",
-          body: JSON.stringify({ action: "delete", timestamp: wish.timestamp })
+          body: JSON.stringify({
+            action: "delete",
+            timestamp: wish.timestamp,
+            rowNumber: wish.rowNumber
+          })
         });
 
         const result = await response.json();

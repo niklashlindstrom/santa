@@ -23,12 +23,13 @@ function getWishlistSheet() {
 function doGet(e) {
   const sheet = getWishlistSheet();
   const data = sheet.getDataRange().getValues();
-  const rows = data.slice(1).map((row) => ({
+  const rows = data.slice(1).map((row, index) => ({
     timestamp: row[0] instanceof Date ? row[0].toISOString() : row[0],
     name: row[1] || "",
     item: row[2] || "",
     link: row[3] || "",
-    notes: row[4] || ""
+    notes: row[4] || "",
+    rowNumber: index + 2 // +2 accounts for the header row and 0-based index
   }));
 
   return createJsonOutput(rows);
@@ -45,12 +46,28 @@ function doPost(e) {
 
     if (action === "delete") {
       const timestamp = payload.timestamp;
+      const rowNumber = Number(payload.rowNumber);
 
-      if (!timestamp) {
-        return createErrorResponse("Timestamp is required to delete an entry.");
+      if (!timestamp && !rowNumber) {
+        return createErrorResponse("Timestamp or row number is required to delete an entry.");
       }
 
       const sheet = getWishlistSheet();
+
+      // Prefer the provided row number for exact matching to avoid timestamp parsing issues.
+      if (rowNumber && rowNumber > 1 && rowNumber <= sheet.getLastRow()) {
+        const rowTimestamp = sheet.getRange(rowNumber, 1).getValue();
+        const normalizedTimestamp =
+          rowTimestamp instanceof Date ? rowTimestamp.toISOString() : rowTimestamp;
+
+        if (timestamp && normalizedTimestamp !== timestamp) {
+          return createErrorResponse("Entry not found.");
+        }
+
+        sheet.deleteRow(rowNumber);
+        return createJsonOutput({ success: true, message: "Item deleted" });
+      }
+
       const data = sheet.getDataRange().getValues();
       let rowToDelete = -1;
 
@@ -83,12 +100,15 @@ function doPost(e) {
     const timestamp = new Date();
     sheet.appendRow([timestamp, name, item, link, notes]);
 
+    const rowNumber = sheet.getLastRow();
+
     const entry = {
       timestamp: timestamp.toISOString(),
       name,
       item,
       link,
-      notes
+      notes,
+      rowNumber
     };
 
     return createJsonOutput({ success: true, message: "Item added", entry });
